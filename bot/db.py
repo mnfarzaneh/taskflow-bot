@@ -4,6 +4,7 @@
 هرچی لازمه (از جمله استیت موقت ویزارد ادمین) توی دیتابیس ذخیره می‌شه.
 """
 
+import time
 import requests
 from .config import SUPABASE_URL, SUPABASE_KEY
 
@@ -18,39 +19,59 @@ def _url(path: str) -> str:
     return f"{SUPABASE_URL}/rest/v1/{path}"
 
 
+def _with_retry(fn, *args, **kwargs):
+    """اتصال به Supabase گاهی به‌خاطر شبکه‌ی ناپایدار قطع می‌شه؛ یه‌بار دوباره امتحان می‌کنیم قبل از شکست کامل."""
+    try:
+        return fn(*args, **kwargs)
+    except requests.exceptions.RequestException as e:
+        print(f"[db] network hiccup, retrying once: {e}")
+        time.sleep(1)
+        return fn(*args, **kwargs)
+
+
 def _get(table: str, params: dict) -> list:
-    r = requests.get(_url(table), headers=_HEADERS, params=params, timeout=10)
-    r.raise_for_status()
-    return r.json()
+    def do():
+        r = requests.get(_url(table), headers=_HEADERS, params=params, timeout=15)
+        r.raise_for_status()
+        return r.json()
+    return _with_retry(do)
 
 
 def _insert(table: str, payload, params: dict = None) -> list:
-    headers = {**_HEADERS, "Prefer": "return=representation"}
-    r = requests.post(_url(table), headers=headers, json=payload, params=params or {}, timeout=10)
-    r.raise_for_status()
-    return r.json()
+    def do():
+        headers = {**_HEADERS, "Prefer": "return=representation"}
+        r = requests.post(_url(table), headers=headers, json=payload, params=params or {}, timeout=15)
+        r.raise_for_status()
+        return r.json()
+    return _with_retry(do)
 
 
 def _upsert(table: str, payload, on_conflict: str) -> list:
-    headers = {**_HEADERS, "Prefer": "resolution=merge-duplicates,return=representation"}
-    r = requests.post(
-        _url(table), headers=headers, json=payload,
-        params={"on_conflict": on_conflict}, timeout=10,
-    )
-    r.raise_for_status()
-    return r.json()
+    def do():
+        headers = {**_HEADERS, "Prefer": "resolution=merge-duplicates,return=representation"}
+        r = requests.post(
+            _url(table), headers=headers, json=payload,
+            params={"on_conflict": on_conflict}, timeout=15,
+        )
+        r.raise_for_status()
+        return r.json()
+    return _with_retry(do)
 
 
 def _patch(table: str, params: dict, payload: dict) -> list:
-    headers = {**_HEADERS, "Prefer": "return=representation"}
-    r = requests.patch(_url(table), headers=headers, params=params, json=payload, timeout=10)
-    r.raise_for_status()
-    return r.json()
+    def do():
+        headers = {**_HEADERS, "Prefer": "return=representation"}
+        r = requests.patch(_url(table), headers=headers, params=params, json=payload, timeout=15)
+        r.raise_for_status()
+        return r.json()
+    return _with_retry(do)
 
 
 def _delete(table: str, params: dict) -> None:
-    r = requests.delete(_url(table), headers=_HEADERS, params=params, timeout=10)
-    r.raise_for_status()
+    def do():
+        r = requests.delete(_url(table), headers=_HEADERS, params=params, timeout=15)
+        r.raise_for_status()
+    return _with_retry(do)
 
 
 # ============================================================ Members
@@ -67,8 +88,13 @@ def get_members() -> list:
     return _get("members", {"select": "*", "order": "registered_at.desc"})
 
 
-def get_member(user_id: int):
+def get_member(user_id: int) -> dict | None:
     rows = _get("members", {"select": "*", "id": f"eq.{user_id}"})
+    return rows[0] if rows else None
+
+
+def set_member_admin(user_id: int, is_admin: bool) -> dict:
+    rows = _patch("members", {"id": f"eq.{user_id}"}, {"is_admin": is_admin})
     return rows[0] if rows else None
 
 
@@ -77,13 +103,14 @@ def get_templates() -> list:
     return _get("templates", {"select": "*", "order": "id.asc"})
 
 
-def get_template(template_id: int):
+def get_template(template_id: int) -> dict | None:
     rows = _get("templates", {"select": "*", "id": f"eq.{template_id}"})
     return rows[0] if rows else None
 
 
 # ============================================================ Chains + Tasks
 def create_chain(title: str, leader_id: int, task_names: list) -> dict:
+    """یک زنجیره‌ی جدید با تسک‌های LOCKED می‌سازه (بدون مسئول هنوز)."""
     chain = _insert("chains", {"title": title, "leader_id": leader_id})[0]
     tasks_payload = [
         {"chain_id": chain["id"], "order_index": i, "task_name": name, "status": "LOCKED"}
@@ -94,7 +121,7 @@ def create_chain(title: str, leader_id: int, task_names: list) -> dict:
     return chain
 
 
-def get_chain(chain_id: str):
+def get_chain(chain_id: str) -> dict | None:
     rows = _get("chains", {"select": "*", "id": f"eq.{chain_id}"})
     if not rows:
         return None
@@ -117,7 +144,7 @@ def get_chain_tasks(chain_id: str) -> list:
     )
 
 
-def get_task(task_id: str):
+def get_task(task_id: str) -> dict | None:
     rows = _get("chain_tasks", {"select": "*", "id": f"eq.{task_id}"})
     return rows[0] if rows else None
 
@@ -137,6 +164,59 @@ def set_task_status(task_id: str, status: str) -> dict:
 
 def set_chain_status(chain_id: str, status: str) -> None:
     _patch("chains", {"id": f"eq.{chain_id}"}, {"status": status})
+
+
+def set_task_note(task_id: str, note: str) -> dict:
+    rows = _patch("chain_tasks", {"id": f"eq.{task_id}"}, {"note": note})
+    return rows[0] if rows else None
+
+
+# ============================================================ Revisions (send-back-for-fix tracking)
+def create_revision(chain_id: str, origin_task_id: str, target_task_id: str) -> None:
+    _insert("revisions", {"chain_id": chain_id, "origin_task_id": origin_task_id, "target_task_id": target_task_id})
+
+
+def get_unresolved_revisions_for_target(target_task_id: str) -> list:
+    return _get("revisions", {"select": "*", "target_task_id": f"eq.{target_task_id}", "resolved": "eq.false"})
+
+
+def resolve_revisions_for_target(target_task_id: str) -> None:
+    _patch("revisions", {"target_task_id": f"eq.{target_task_id}", "resolved": "eq.false"}, {"resolved": True})
+
+
+def get_unresolved_revisions_for_origin(origin_task_id: str) -> list:
+    return _get("revisions", {"select": "*", "origin_task_id": f"eq.{origin_task_id}", "resolved": "eq.false"})
+
+
+# ============================================================ Editing an existing chain's structure
+def rename_task(task_id: str, new_name: str) -> dict:
+    rows = _patch("chain_tasks", {"id": f"eq.{task_id}"}, {"task_name": new_name})
+    return rows[0] if rows else None
+
+
+def delete_chain_task(task_id: str) -> None:
+    _delete("chain_tasks", {"id": f"eq.{task_id}"})
+
+
+def reindex_chain_tasks(chain_id: str) -> None:
+    """بعد از حذف/افزودنِ یه تسک، شماره‌ی ترتیبِ بقیه رو پشت‌سرهم می‌کنه (بدون شکاف)."""
+    tasks = get_chain_tasks(chain_id)
+    for i, t in enumerate(tasks):
+        if t["order_index"] != i:
+            _patch("chain_tasks", {"id": f"eq.{t['id']}"}, {"order_index": i})
+
+
+def add_chain_task(chain_id: str, task_name: str) -> dict:
+    tasks = get_chain_tasks(chain_id)
+    next_index = max([t["order_index"] for t in tasks], default=-1) + 1
+    rows = _insert("chain_tasks", {
+        "chain_id": chain_id, "order_index": next_index, "task_name": task_name, "status": "LOCKED",
+    })
+    return rows[0]
+
+
+def delete_chain(chain_id: str) -> None:
+    _delete("chains", {"id": f"eq.{chain_id}"})
 
 
 # ============================================================ Admin wizard session

@@ -5,6 +5,7 @@ from .config import TELEGRAM_API
 def _call(method: str, payload: dict) -> dict:
     r = requests.post(f"{TELEGRAM_API}/{method}", json=payload, timeout=10)
     if not r.ok:
+        # لاگ می‌کنیم ولی کل هندلر رو نمی‌ترکونیم؛ تلگرام با retry مواجه نشه بهتره خطا رو ببلعیم
         print(f"[telegram] {method} failed: {r.status_code} {r.text}")
     return r.json() if r.content else {}
 
@@ -36,7 +37,9 @@ def set_webhook(url: str, secret_token: str) -> dict:
     return _call("setWebhook", {"url": url, "secret_token": secret_token})
 
 
+# ---- کیبورد ساز‌های کوچیک ----
 def inline_keyboard(rows: list) -> dict:
+    """rows: لیستی از لیست‌هایی از (text, callback_data)"""
     return {
         "inline_keyboard": [
             [{"text": text, "callback_data": data} for text, data in row]
