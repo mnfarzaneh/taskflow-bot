@@ -1,11 +1,11 @@
 # TaskFlowChain Bot
 
-> A Telegram bot for chain-based task workflows — inspired by [TaskFlow](https://github.com/mnfarzaneh/TaskFlow), an Android app I built for sequential task management. Instead of writing a dedicated backend for multi-user communication, I used Telegram itself as the messaging/identity/notification layer.
+> A Telegram bot for chain-based task workflows — inspired by [TaskFlow](https://github.com/mnfarzaneh/TaskFlow), an Android app I built for sequential task management. Instead of writing a dedicated backend for multi-user communication, this project uses Telegram itself as the messaging/identity/notification layer.
 
 **Highlights**
-- Fully serverless-style architecture: **PythonAnywhere** (Flask webhook) + **Supabase** (Postgres via REST) — zero fixed hosting cost.
-- No `python-telegram-bot`; raw HTTP calls to the Bot API, chosen deliberately to fit a stateless request/response model.
-- Chain-based task flow with sequential unlocking, revision/rework cycles (report an issue on an earlier stage, it reopens and control returns to the reporter once fixed), self-service task handoff between users, live chain editing, and runtime admin promotion via a password command.
+- Serverless-style architecture: **PythonAnywhere** (Flask webhook) + **Supabase** (Postgres via REST) — no fixed hosting cost.
+- No `python-telegram-bot`; raw HTTP calls to the Bot API, chosen to fit a stateless request/response model.
+- Chain-based task flow with sequential unlocking, revision/rework cycles (an earlier stage can be reopened with a note, and control returns to the reporting stage once every reopened stage is fixed), self-service task handoff between users, live chain editing, and runtime admin promotion via a password command.
 
 **Stack:** Python · Flask · Supabase (Postgres) · Telegram Bot API · PythonAnywhere
 
@@ -22,71 +22,80 @@ Telegram Bot API ── webhook ──▶ PythonAnywhere (Flask, api/webhook.py)
 
 ---
 
-## توضیحاتِ کامل (فارسی)
+## توضیحات کامل (فارسی)
 
-بات تلگرامیِ مدیریتِ زنجیره‌ایِ وظایف — الهام‌گرفته از اپلیکیشنِ اندرویدیِ [TaskFlow](https://github.com/mnfarzaneh/TaskFlow)، با این تفاوت که به‌جای بک‌اندِ اختصاصی، از خودِ زیرساختِ تلگرام (پیام‌رسانی، هویت، نوتیفیکیشن) استفاده می‌کنه.
+TaskFlowChain یک ربات تلگرامی برای مدیریت زنجیره‌ای وظایف است. این ربات به یک مدیر گروه (سرگروه) امکان می‌دهد یک زنجیره از مراحل بسازد، هر مرحله را به یکی از اعضا اختصاص دهد، و ترتیب اجرا را کنترل کند: هر مرحله فقط زمانی به مسئولش اطلاع داده می‌شود که مرحله‌ی قبلی تکمیل شده باشد.
 
-سرگروه یه زنجیره از مراحل می‌سازه، هر مرحله رو به یکی از اعضا محول می‌کنه، و هر مرحله فقط وقتی نوبتش برسه (مرحله‌ی قبلش تمام بشه) به مسئولش پیام می‌ده.
+این پروژه از اپلیکیشن اندرویدی TaskFlow الهام گرفته شده، با این تفاوت که برای ارتباط بین کاربران، به‌جای نوشتن یک بک‌اند اختصاصی، از زیرساخت خودِ تلگرام (پیام‌رسانی، هویت کاربران، و نوتیفیکیشن) استفاده شده است.
 
 ### معماری
 
-بدون هیچ سرورِ همیشه‌روشن یا هزینه‌ی ماهانه:
+اجرای این ربات به هیچ سرور همیشه‌روشن یا هزینه‌ی ثابت ماهانه نیاز ندارد:
 
-- **اجرا:** [PythonAnywhere](https://www.pythonanywhere.com) — یه وب‌اپِ Flask که با وبهوک تلگرام کار می‌کنه؛ فقط وقتی واقعاً پیامی برسه «بیدار» می‌شه.
-- **دیتابیس:** [Supabase](https://supabase.com) (Postgres، سطحِ رایگان) — چون هر اجرا مستقل و بی‌حافظه‌ست، همه‌ی استیت (زنجیره‌ها، تسک‌ها، اعضا، حتی استیتِ موقتِ ویزارد) توی دیتابیس نگه داشته می‌شه.
-- بدون `python-telegram-bot`؛ ارتباط مستقیم و خام با Bot API از طریق `requests`.
+- **اجرا:** [PythonAnywhere](https://www.pythonanywhere.com) — یک وب‌اپ Flask که از طریق وبهوک تلگرام فراخوانی می‌شود؛ کد فقط زمانی اجرا می‌شود که پیامی واقعی برسد.
+- **دیتابیس:** [Supabase](https://supabase.com) (Postgres، سطح رایگان) — چون هر اجرا مستقل و بدون حافظه‌ی داخلی است، تمام وضعیت (زنجیره‌ها، تسک‌ها، اعضا، و حتی وضعیت موقتِ ویزاردهای چندمرحله‌ای) در دیتابیس نگه‌داری می‌شود.
+- ارتباط با تلگرام بدون کتابخانه‌ی `python-telegram-bot` و از طریق فراخوانی مستقیمِ Bot API با کتابخانه‌ی `requests` انجام می‌شود.
 
-هردو سرویس سطحِ رایگان دارن؛ محدودیت‌هاشون در بخشِ «محدودیت‌ها» پایین‌تر توضیح داده شده.
+هر دو سرویس دارای سطح رایگان با محدودیت‌های مشخص هستند؛ جزئیات در بخش «محدودیت‌های سطح رایگان» آمده است.
 
 ### قابلیت‌ها
 
-- **ثبتِ اعضا:** هرکس با `/start` عضو می‌شه.
-- **ساختِ زنجیره:** انتخاب از بین الگوهای آماده، ویرایشِ تسک‌ها (تغییرِ نام، حذف، افزودن به ابتدا/انتها، جابه‌جاییِ ترتیب با ⬆️⬇️)، و تخصیصِ مسئولِ هر مرحله از بین اعضای ثبت‌شده.
-- **پیشرویِ خودکار:** با «✅ تمام شد» زدنِ هر مرحله، مرحله‌ی بعدی خودکار باز و به مسئولش اطلاع داده می‌شه.
-- **گزارشِ ایراد / چرخه‌ی اصلاح:** هرکسی می‌تونه از مراحلِ قبلیِ تمام‌شده ایراد بگیره؛ اون مرحله دوباره باز و مسئولش با دلیلِ ایراد مطلع می‌شه. اگه چند مرحله هم‌زمان گزارش بشه، فقط بعد از رفعِ **همه‌شون** کنترل به مرحله‌ای که گزارش رو داده برمی‌گرده (نه مرحله‌ی بعدیِ ترتیبِ عادی).
-- **یادداشتِ هندآف:** موقعِ اتمامِ هر مرحله، امکانِ نوشتنِ یادداشت برای نفرِ بعدی.
-- **واگذاریِ خودخواسته:** خودِ فرد می‌تونه مسئولیتِ تسکش رو به فردِ دیگه‌ای واگذار کنه؛ گیرنده پیامِ واضحِ «مسئولیت از طرفِ X به شما واگذار شد» می‌گیره (نه پیامِ عمومیِ نوبت).
-- **ویرایشِ زنجیره‌ی فعال:** تغییرِ مسئول، تغییرِ نامِ تسک، حذفِ تسک، افزودنِ تسکِ جدید به یه زنجیره‌ی درحال‌اجرا — با اطلاع‌رسانیِ خودکار به فردِ تحتِ‌تأثیر.
-- **حذفِ کاملِ زنجیره:** با تأییدِ دوم، همراه با اطلاع‌رسانی به هرکی تسکِ فعال داشته.
-- **وضعیتِ فیلترشده:** انتخابِ یه زنجیره‌ی خاص از لیست، به‌جای دیدنِ همه‌چیز یک‌جا؛ هم برای ادمین هم برای کاربرِ عادی (با نامِ مسئولِ هر مرحله).
-- **ادمین‌شدن با رمز:** دستورِ `/admin` + واردکردنِ رمز، بدون نیاز به دخالتِ دستیِ توسعه‌دهنده.
+- **ثبت اعضا:** هر کاربر با ارسال `/start` در سیستم ثبت می‌شود.
+- **ساخت زنجیره:** انتخاب از میان الگوهای از‌پیش‌تعریف‌شده، ویرایش تسک‌ها (تغییر نام، حذف، افزودن به ابتدا یا انتها، جابه‌جایی ترتیب با دکمه‌های ⬆️/⬇️)، و تعیین مسئول هر مرحله از میان اعضای ثبت‌شده.
+- **پیشروی خودکار:** با ثبت وضعیت «تمام شد» برای هر مرحله، مرحله‌ی بعدی به‌طور خودکار باز شده و به مسئولش اطلاع داده می‌شود.
+- **گزارش ایراد و چرخه‌ی اصلاح:** هر کاربر می‌تواند نسبت به یک مرحله‌ی قبلیِ تکمیل‌شده گزارش ایراد ثبت کند؛ آن مرحله دوباره باز شده و مسئولش همراه با دلیل ایراد مطلع می‌شود. اگر چند مرحله هم‌زمان گزارش شوند، فقط پس از اصلاح همه‌ی آن‌ها، کنترل به مرحله‌ای که گزارش را ثبت کرده بازمی‌گردد (نه به مرحله‌ی بعدیِ ترتیب عادی زنجیره).
+- **یادداشت هنگام تحویل:** در لحظه‌ی تکمیل هر مرحله، امکان نوشتن یادداشت برای نفر بعدی وجود دارد.
+- **واگذاری داوطلبانه:** هر کاربر می‌تواند مسئولیت تسک خود را به فرد دیگری واگذار کند؛ فرد گیرنده پیامی روشن دریافت می‌کند («مسئولیت این مرحله از طرف [نام واگذارکننده] به شما واگذار شد»)، نه پیام عمومیِ اعلام نوبت.
+- **ویرایش زنجیره‌ی فعال:** تغییر مسئول، تغییر نام تسک، حذف تسک، و افزودن تسک جدید به یک زنجیره‌ی در حال اجرا — همراه با اطلاع‌رسانی خودکار به فردی که تحت تأثیر تغییر قرار می‌گیرد.
+- **حذف کامل زنجیره:** پس از یک مرحله‌ی تأیید، همراه با اطلاع‌رسانی به هر کسی که در آن لحظه تسک فعالی داشته باشد.
+- **مشاهده‌ی وضعیت به تفکیک زنجیره:** به‌جای نمایش همه‌چیز یک‌جا، ابتدا انتخاب یک زنجیره‌ی مشخص از فهرست، سپس نمایش جزئیات همان زنجیره (شامل نام مسئول هر مرحله)، هم برای مدیر و هم برای کاربر عادی.
+- **ارتقا به سطح مدیر با رمز:** با ارسال دستور `/admin` و وارد کردن رمز عبور، کاربر بدون نیاز به دخالت دستیِ توسعه‌دهنده می‌تواند به سطح مدیر ارتقا یابد.
 
-### ساختارِ فایل‌ها
+### ساختار فایل‌ها
 
 ```
 taskflow-bot/
 ├── api/
-│   └── webhook.py        # اندپوینتِ Flask که PythonAnywhere صداش می‌زنه
+│   └── webhook.py        # اندپوینت Flask که PythonAnywhere آن را فراخوانی می‌کند
 ├── bot/
-│   ├── config.py          # خواندنِ متغیرهای محیطی
-│   ├── db.py               # لایه‌ی دیتابیس (Supabase REST)
-│   ├── telegram.py         # ارتباطِ خام با Bot API
-│   └── handlers.py         # کلِ منطقِ بات
-├── run_local.py            # اجرای محلی با polling، برای تست بدون هاست
-├── schema.sql              # ساختارِ اولیه‌ی جداول
-├── migration_00X.sql       # تغییراتِ بعدیِ دیتابیس (به‌ترتیب اجرا بشن)
+│   ├── config.py          # خواندن متغیرهای محیطی
+│   ├── db.py               # لایه‌ی دسترسی به دیتابیس (Supabase REST)
+│   ├── telegram.py         # ارتباط مستقیم با Bot API تلگرام
+│   └── handlers.py         # کل منطق ربات
+├── run_local.py            # اجرای محلی با روش polling، برای تست بدون نیاز به هاست
+├── schema.sql              # ساختار اولیه‌ی جداول دیتابیس
+├── migration_00X.sql       # تغییرات بعدیِ ساختار دیتابیس (باید به‌ترتیب اجرا شوند)
 └── requirements.txt
 ```
 
+هر فایل migration مربوط به یک قابلیت مشخص از ربات است:
+
+| فایل | هدف |
+|---|---|
+| `schema.sql` | ساخت جداول اولیه (اعضا، الگوها، زنجیره‌ها، تسک‌ها) |
+| `migration_001.sql` | جلوگیری از تکرار در جدول الگوها و افزودن ستون یادداشت به تسک‌ها |
+| `migration_002.sql` | ساخت جدول `revisions` برای پیاده‌سازیِ چرخه‌ی اصلاح |
+| `migration_003.sql` | افزودن ستون `is_admin` برای قابلیت ارتقا به مدیر با رمز |
+
 ### راه‌اندازی
 
-**۱) بات در BotFather**
-`/newbot` بزن و توکن رو بگیر (این توکن هیچ‌وقت توی کد یا گیت‌هاب نره — فقط توی متغیرهای محیطی).
+**۱) ساخت ربات در BotFather**
+با ارسال `/newbot` به [@BotFather](https://t.me/BotFather) یک ربات جدید ساخته و توکن آن دریافت می‌شود. این توکن هرگز نباید در کد یا مخزن گیت‌هاب قرار گیرد؛ فقط باید در متغیرهای محیطی ذخیره شود.
 
-**۲) دیتابیس در Supabase**
-پروژه‌ی رایگان بساز، بعد به‌ترتیب توی SQL Editor اجرا کن:
+**۲) ساخت دیتابیس در Supabase**
+پس از ساخت یک پروژه‌ی رایگان، فایل‌های زیر باید به‌ترتیب در SQL Editor اجرا شوند:
 1. `schema.sql`
-2. `migration_001.sql` (رفعِ تکرارِ الگوها + ستونِ یادداشت)
-3. `migration_002.sql` (جدولِ `revisions` برای چرخه‌ی اصلاح)
-4. `migration_003.sql` (ستونِ `is_admin` برای ادمین‌شدن با رمز)
+2. `migration_001.sql`
+3. `migration_002.sql`
+4. `migration_003.sql`
 
-از `Project Settings → API`، مقدارِ `Project URL` و کلیدِ `service_role` (یا `Secret key` در نسخه‌های جدید) رو بردار.
+سپس از مسیر `Project Settings → API`، مقدار `Project URL` و کلید `service_role` (یا `Secret key` در نسخه‌های جدیدتر داشبورد) برداشته می‌شود.
 
 **۳) دیپلوی روی PythonAnywhere**
-1. حسابِ رایگان بساز (فقط ایمیل لازمه، نه شماره).
-2. از Bash console: `git clone <آدرسِ ریپو>`
-3. از تبِ **Web** → Add a new web app → Flask → Python 3.10+.
-4. فایلِ WSGI (لینکش توی همون تبِ Web) رو این‌طوری تنظیم کن:
+1. ساخت یک حساب رایگان (فقط ایمیل لازم است، بدون نیاز به شماره تلفن).
+2. از طریق Bash console: `git clone <آدرس مخزن>`
+3. از تب **Web**: گزینه‌ی Add a new web app → انتخاب Flask → انتخاب Python 3.10 یا بالاتر.
+4. فایل WSGI (لینک آن در همان تب Web موجود است) باید به این شکل تنظیم شود:
 
 ```python
 import sys, os
@@ -94,7 +103,7 @@ import sys, os
 os.environ["HTTP_PROXY"] = "http://proxy.server:3128"
 os.environ["HTTPS_PROXY"] = "http://proxy.server:3128"
 
-path = '/home/<یوزرنیم>/taskflow-bot'
+path = '/home/<username>/taskflow-bot'
 if path not in sys.path:
     sys.path.insert(0, path)
 
@@ -108,32 +117,32 @@ os.environ["SUPABASE_SERVICE_KEY"] = "..."
 from api.webhook import app as application
 ```
 
-5. Reload بزن.
+5. زدن دکمه‌ی Reload.
 
-**۴) وصل‌کردنِ وبهوک**
+**۴) اتصال وبهوک به تلگرام**
 ```
-https://api.telegram.org/bot<TOKEN>/setWebhook?url=https://<یوزرنیم>.pythonanywhere.com/api/webhook&secret_token=<WEBHOOK_SECRET>
+https://api.telegram.org/bot<TOKEN>/setWebhook?url=https://<username>.pythonanywhere.com/api/webhook&secret_token=<WEBHOOK_SECRET>
 ```
 
-### اجرای محلی (بدون هاست، فقط برای تست)
+### اجرای محلی (بدون نیاز به هاست، صرفاً برای تست)
 
 ```bash
 python -m venv venv
 venv\Scripts\activate      # ویندوز
 pip install flask requests python-dotenv
 ```
-فایلِ `.env` بساز، وبهوکِ فعلی رو خاموش کن (`.../deleteWebhook`)، بعد:
+یک فایل `.env` با متغیرهای لازم ساخته می‌شود، وبهوک فعال با فراخوانی `.../deleteWebhook` غیرفعال می‌شود، و سپس:
 ```bash
 python run_local.py
 ```
 
-### محدودیت‌های سطحِ رایگان
+### محدودیت‌های سطح رایگان
 
-- **PythonAnywhere:** وب‌اپ اگه یک ماه هیچ فعالیتی نبینه، غیرفعال (نه پاک) می‌شه؛ کافیه دوباره وارد حساب بشی و تمدیدش کنی.
-- **Supabase:** پروژه اگه ۷ روز هیچ کوئریِ واقعی نگیره، Pause می‌شه؛ از داشبورد دوباره فعالش کن (اولین درخواستِ بعدش چند ثانیه طول می‌کشه).
+- **PythonAnywhere:** در صورتی که وب‌اپ به مدت یک ماه هیچ فعالیتی نداشته باشد، غیرفعال می‌شود (نه حذف)؛ برای فعال‌سازی مجدد کافی است وارد حساب شده و آن را تمدید کرد.
+- **Supabase:** در صورتی که پروژه به مدت ۷ روز هیچ درخواست واقعی به دیتابیس دریافت نکند، به حالت Pause می‌رود؛ فعال‌سازی مجدد از طریق داشبورد انجام می‌شود و اولین درخواست پس از آن چند ثانیه طول می‌کشد.
 
-برای یه گروهِ فعال، این محدودیت‌ها معمولاً هیچ‌وقت لمس نمی‌شن.
+برای یک گروه با فعالیت منظم، این محدودیت‌ها معمولاً هیچ‌گاه مانع کار نمی‌شوند.
 
-### نکاتِ امنیتی
-- `BOT_TOKEN`، `SUPABASE_SERVICE_KEY`، و `ADMIN_PASSWORD` فقط توی فایلِ WSGI (PythonAnywhere) یا `.env` (محلی) — هیچ‌وقت توی گیت‌هاب یا کدِ کامیت‌شده.
-- `.gitignore` باید شاملِ `.env`, `.env.*`, `venv/` باشه.
+### نکات امنیتی
+- مقادیر `BOT_TOKEN`، `SUPABASE_SERVICE_KEY`، و `ADMIN_PASSWORD` فقط باید در فایل WSGI (روی PythonAnywhere) یا فایل `.env` (در محیط محلی) قرار بگیرند؛ هرگز در کد یا مخزن گیت‌هاب.
+- فایل `.gitignore` باید شامل `.env`, `.env.*`, و `venv/` باشد.
