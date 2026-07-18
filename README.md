@@ -1,6 +1,6 @@
 # TaskFlowChain Bot
 
-> A Telegram bot for chain-based task workflows — inspired by [TaskFlow](.), an Android app I built for sequential task management. Instead of writing a dedicated backend for multi-user communication, I used Telegram itself as the messaging/identity/notification layer.
+> A Telegram bot for chain-based task workflows — inspired by [TaskFlow](https://github.com/mnfarzaneh/TaskFlow), an Android app I built for sequential task management. Instead of writing a dedicated backend for multi-user communication, I used Telegram itself as the messaging/identity/notification layer.
 
 **Highlights**
 - Fully serverless-style architecture: **PythonAnywhere** (Flask webhook) + **Supabase** (Postgres via REST) — zero fixed hosting cost.
@@ -24,7 +24,7 @@ Telegram Bot API ── webhook ──▶ PythonAnywhere (Flask, api/webhook.py)
 
 ## توضیحاتِ کامل (فارسی)
 
-بات تلگرامیِ مدیریتِ زنجیره‌ایِ وظایف — الهام‌گرفته از اپلیکیشنِ اندرویدیِ TaskFlow، با این تفاوت که به‌جای بک‌اندِ اختصاصی، از خودِ زیرساختِ تلگرام (پیام‌رسانی، هویت، نوتیفیکیشن) استفاده می‌کنه.
+بات تلگرامیِ مدیریتِ زنجیره‌ایِ وظایف — الهام‌گرفته از اپلیکیشنِ اندرویدیِ [TaskFlow](https://github.com/mnfarzaneh/TaskFlow)، با این تفاوت که به‌جای بک‌اندِ اختصاصی، از خودِ زیرساختِ تلگرام (پیام‌رسانی، هویت، نوتیفیکیشن) استفاده می‌کنه.
 
 سرگروه یه زنجیره از مراحل می‌سازه، هر مرحله رو به یکی از اعضا محول می‌کنه، و هر مرحله فقط وقتی نوبتش برسه (مرحله‌ی قبلش تمام بشه) به مسئولش پیام می‌ده.
 
